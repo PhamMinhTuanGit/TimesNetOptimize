@@ -26,11 +26,13 @@ CONV_HIDDEN_SIZE=128
 # --- Execute Training Command ---
 # The backslashes (\) at the end of each line allow us to break the command
 # into multiple lines for better readability.
-python /Users/phamminhtuan/Desktop/TimesNetOptimize/training.py \
+python3 /Users/phamminhtuan/Desktop/TimesNetOptimize/training.py \
     --data_path "${DATA_FILE}" \
     --traffic_direction "${TRAFFIC_DIRECTION}" \
     --output_dir "${OUTPUT_DIR}" \
-    TimesNet \
+    --freq "5min" \
+    --val_size 12 \
+    --model_name TimesNet \
     --h ${HORIZON} \
     --input_size ${INPUT_SIZE} \
     --loss ${LOSS_FUNCTION} \

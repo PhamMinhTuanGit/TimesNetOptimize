@@ -8,7 +8,7 @@ from neuralforecast import NeuralForecast
 # We need to import the model classes to be able to load from a checkpoint
 from neuralforecast.models import TimesNet, NHITS, PatchTST
 
-from Data_processing import get_traffic_in_df, get_traffic_out_df
+from Data_processing import process_traffic_data
 
 def get_model_class(model_name: str):
     """Returns the model class from its name."""
@@ -41,11 +41,10 @@ def main():
 
     # 2. Load and Prepare Data
     print(f"Loading and processing data from: {args.data_path}")
-    df_raw = pd.read_excel(args.data_path, header=3)
-    if args.traffic_direction == 'in':
-        full_df = get_traffic_in_df(df_raw)
-    else:
-        full_df = get_traffic_out_df(df_raw)
+    df_raw = pd.read_excel(args.data_path, header=0)
+    # Clean column names to prevent KeyErrors
+    df_raw.columns = df_raw.columns.str.strip()
+    full_df = process_traffic_data(df_raw, direction=args.traffic_direction)
     full_df.dropna(inplace=True)
 
     # Split data into initial history and the part to be forecasted
@@ -95,6 +94,17 @@ def main():
     forecast_csv_path = os.path.join(run_output_dir, 'rolling_forecast.csv')
     results_df.to_csv(forecast_csv_path, index=False)
     print(f"Forecasts saved to: {forecast_csv_path}")
+
+    # 5. Evaluate forecasts
+    from utils import calculate_metrics, save_dict_to_json
+
+    evaluation = calculate_metrics(results_df, args.model_name)
+    print("\n--- Rolling Forecast Evaluation Metrics ---")
+    for metric, value in evaluation.items():
+        print(f"{metric.upper()}: {value:.4f}")
+    summary_path = os.path.join(run_output_dir, 'summary.json')
+    save_dict_to_json(evaluation, summary_path)
+    print(f"\nEvaluation summary saved to: {summary_path}")
 
     # 5. Plot and Save Figure
     fig, ax = plt.subplots(figsize=(15, 8))

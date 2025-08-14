@@ -20,26 +20,12 @@ def count_parameters(model):
     """Counts the number of trainable parameters in a model."""
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-def main(args_list: list = None):
+def add_model_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     """
-    Main function to parse command-line arguments and create a model.
-    This allows for testing model creation from the command line or programmatically.
-
-    Args:
-        args_list (list, optional): A list of command-line arguments.
-                                    If None, arguments are parsed from sys.argv.
-                                    Defaults to None.
-
-    Returns:
-        An instantiated NeuralForecast model.
+    Adds model-specific arguments to an ArgumentParser.
     """
-    parser = argparse.ArgumentParser(
-        description="Create and inspect a time series forecasting model.",
-        formatter_class=argparse.RawTextHelpFormatter  # For better help text
-    )
-
     # General arguments
-    parser.add_argument('model_name', type=str, choices=['TimesNet', 'NHITS', 'PatchTST'],
+    parser.add_argument('--model_name', type=str, required=True, choices=['TimesNet', 'NHITS', 'PatchTST'],
                         help='Name of the model to create.')
     parser.add_argument('--h', type=int, default=24, help='Forecast horizon.')
     parser.add_argument('--input_size', type=int, default=72, help='Input window size (look-back).')
@@ -63,18 +49,19 @@ def main(args_list: list = None):
     parser.add_argument('--n_blocks', type=int, default=1, help='(NHITS) Number of blocks per stack. A list of 3 will be created.')
     parser.add_argument('--mlp_units', type=int, nargs=2, default=[512, 512],
                         help='(NHITS) MLP units for each block, e.g., --mlp_units 512 512. A list of lists will be created.')
+    
+    return parser
 
-    args = parser.parse_args(args_list)
-
+def create_model_from_args(args: argparse.Namespace) -> object:
+    """Creates a NeuralForecast model instance from parsed arguments."""
+    LOSS_MAP = {
+        'DistributionLoss': DistributionLoss(distribution='Normal', level=[80, 90]),
+        'MAPE': MAPE(),
+        'MAE': MAE(),
+        'MSE': MSE()
+    }
     # Instantiate the loss function based on the argument
-    if args.loss == 'DistributionLoss':
-        loss_function = DistributionLoss(distribution='Normal', level=[80, 90])
-    elif args.loss == 'MAPE':
-        loss_function = MAPE()
-    elif args.loss == 'MAE':
-        loss_function = MAE()
-    elif args.loss == 'MSE':
-        loss_function = MSE()
+    loss_function = LOSS_MAP.get(args.loss, MAE())
 
     # Prepare the parameters for the factory function
     model_params = {
@@ -102,6 +89,29 @@ def main(args_list: list = None):
         model_params['stack_types'] = ['identity'] * 3 # Common setting for general forecasting
 
     model_instance = get_time_series_model(model_name=args.model_name, **model_params)
+
+    return model_instance
+
+def main(args_list: list = None):
+    """
+    Main function to parse command-line arguments and create a model.
+    This allows for testing model creation from the command line.
+
+    Args:
+        args_list (list, optional): A list of command-line arguments.
+                                    If None, arguments are parsed from sys.argv.
+                                    Defaults to None.
+
+    Returns:
+        An instantiated NeuralForecast model.
+    """
+    parser = argparse.ArgumentParser(
+        description="Create and inspect a time series forecasting model.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    parser = add_model_args(parser)
+    args = parser.parse_args(args_list)
+    model_instance = create_model_from_args(args)
 
     # Only print details when run as a standalone script
     if args_list is None:

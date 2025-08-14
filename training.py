@@ -9,23 +9,18 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 
 # Import from your local modules
-from Data_processing import get_traffic_in_df, get_traffic_out_df
-from model import main as create_model  # Alias for clarity
-from model import count_parameters
+from Data_processing import process_traffic_data
+from model import add_model_args, create_model_from_args
 
 
 def load_and_process_data(file_path: str, traffic_direction: str = 'in'):
     """Loads and processes data from the specified Excel file."""
     print(f"Loading data from: {file_path}")
-    df_raw = pd.read_excel(file_path, header=3)
+    df_raw = pd.read_excel(file_path, header=0)
+    df_raw.columns = df_raw.columns.str.strip()
 
     print(f"Processing traffic direction: {traffic_direction}")
-    if traffic_direction == 'in':
-        df = get_traffic_in_df(df_raw)
-    elif traffic_direction == 'out':
-        df = get_traffic_out_df(df_raw)
-    else:
-        raise ValueError("traffic_direction must be 'in' or 'out'")
+    df = process_traffic_data(df_raw, direction=traffic_direction)
 
     # Drop rows with NaN values that might have been created during processing
     df.dropna(inplace=True)
@@ -59,10 +54,15 @@ def main():
     train_df, test_df = load_and_process_data(train_args.data_path, train_args.traffic_direction)
 
     # 3. Create the Model using model.py's main function
-    if not model_args or model_args[0] not in ['TimesNet', 'NHITS', 'PatchTST']:
-        raise ValueError("You must specify a model name (TimesNet, NHITS, or PatchTST) as the first argument after training args.")
+    # Find the model name from the arguments passed to the model
+    # A more robust way to find the model name without fully parsing all model args here
+    temp_parser = argparse.ArgumentParser()
+    temp_parser.add_argument('--model_name')
+    model_name_args, _ = temp_parser.parse_known_args(model_args)
+    model_name = model_name_args.model_name
+    if not model_name:
+        raise ValueError("Error: --model_name argument is required. Eg: --model_name TimesNet")
 
-    model_name = model_args[0]
     print(f"\n--- Creating Model: {model_name} ---")
     model = create_model(model_args)
 
@@ -97,9 +97,25 @@ def main():
     results_df = pd.merge(test_df, forecasts_df, on=['unique_id', 'ds'], how='left')
 
     # 7. Save Results
-    forecast_csv_path = os.path.join(run_output_dir, f'forecasts_{model_name}_{train_args.traffic_direction}_{count_parameters(model)}.csv')
+    forecast_csv_path = os.path.join(run_output_dir, 'forecasts.csv')
     results_df.to_csv(forecast_csv_path, index=False)
     print(f"Forecasts saved to: {forecast_csv_path}")
+
+    # 8. Evaluate forecasts
+    from utils import calculate_metrics, save_dict_to_json
+
+    evaluation = calculate_metrics(results_df, model_name)
+    print("\n--- Evaluation Metrics ---")
+    for metric, value in evaluation.items():
+        print(f"{metric.upper()}: {value:.4f}")
+
+    summary = {
+        'model_args': model_args,
+        'evaluation': evaluation
+    }
+    summary_path = os.path.join(run_output_dir, 'summary.json')
+    save_dict_to_json(summary, summary_path)
+    print(f"\nEvaluation summary saved to: {summary_path}")
 
     # 8. Plot and Save Figure
     fig, ax = plt.subplots(figsize=(12, 8))
@@ -125,7 +141,7 @@ def main():
     ax.legend()
     ax.grid(True)
 
-    plot_path = os.path.join(run_output_dir, f'forecast_plot_{model_name}_{train_args.traffic_direction}_{count_parameters(model)}.png')
+    plot_path = os.path.join(run_output_dir, 'forecast_plot.png')
     fig.savefig(plot_path)
     print(f"Forecast plot saved to: {plot_path}")
     plt.close(fig)
