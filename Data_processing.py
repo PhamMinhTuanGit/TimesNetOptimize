@@ -72,7 +72,6 @@ def get_traffic_out_df(df:pd.DataFrame):
 
 if __name__ == '__main__':
     df = pd.read_excel('data/SLA0338SRT03_20250807114227010.xlsx',  header = 3)
-
     df  = df.drop(columns =['No.', 'Device name', 'Device IP', 'Interface name', 'speed', 'unit',
        'interfaceId','KpiDataFindResult.packetErrorStr',
        'KpiDataFindResult.trafficInRaw', 'KpiDataFindResult.trafficOutRaw',
