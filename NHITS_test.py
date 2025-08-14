@@ -21,9 +21,6 @@ model = NHITS(
     val_check_steps=50,
 )
 
-# Bạn có thể kiểm tra số lượng tham số bằng cách sau
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
+from model import count_parameters
 print(f"Số lượng tham số của mô hình N-HITS: {count_parameters(model):,}")
 # Kết quả sẽ xấp xỉ 21-22 triệu tham số

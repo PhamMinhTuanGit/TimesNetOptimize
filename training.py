@@ -11,6 +11,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 # Import from your local modules
 from Data_processing import process_traffic_data
 from model import add_model_args, create_model_from_args
+from utils import calculate_metrics, save_dict_to_json
 
 
 def load_and_process_data(file_path: str, traffic_direction: str = 'in'):
@@ -22,7 +23,6 @@ def load_and_process_data(file_path: str, traffic_direction: str = 'in'):
     print(f"Processing traffic direction: {traffic_direction}")
     df = process_traffic_data(df_raw, direction=traffic_direction)
 
-    # Drop rows with NaN values that might have been created during processing
     df.dropna(inplace=True)
 
     # Split data
@@ -37,61 +37,62 @@ def load_and_process_data(file_path: str, traffic_direction: str = 'in'):
 
 def main():
     # 1. Setup Argument Parser
-    # We use parse_known_args to separate training-specific args from model-specific args
-    parser = argparse.ArgumentParser(description="Train a NeuralForecast model.")
-
-    # --- Training and Data Arguments ---
-    parser.add_argument('--data_path', type=str, required=True, help='Path to the input data file (e.g., .xlsx)')
+    parser = argparse.ArgumentParser(description="Train and evaluate a NeuralForecast model.")
+    
+    # --- Add Training-specific arguments ---
+    parser.add_argument('--data_path', type=str, required=True, help='Path to the input data file (.xlsx)')
     parser.add_argument('--traffic_direction', type=str, default='in', choices=['in', 'out'], help='Traffic direction to model.')
     parser.add_argument('--output_dir', type=str, default='./output', help='Directory to save logs, checkpoints, and forecasts.')
     parser.add_argument('--freq', type=str, default='5min', help='Frequency of the time series data.')
     parser.add_argument('--val_size', type=int, default=12, help='Size of the validation set for NeuralForecast.')
+    parser.add_argument('--disable_checkpointing', action='store_true', help='If set, disables saving model checkpoints.')
 
-    # Parse only the arguments defined above. The rest are for the model.
-    train_args, model_args = parser.parse_known_args()
+    # --- Add Model-specific arguments from model.py ---
+    parser = add_model_args(parser)
+
+    # --- Parse all arguments ---
+    args = parser.parse_args()
 
     # 2. Load and Prepare Data
-    train_df, test_df = load_and_process_data(train_args.data_path, train_args.traffic_direction)
+    train_df, test_df = load_and_process_data(args.data_path, args.traffic_direction)
 
-    # 3. Create the Model using model.py's main function
-    # Find the model name from the arguments passed to the model
-    # A more robust way to find the model name without fully parsing all model args here
-    temp_parser = argparse.ArgumentParser()
-    temp_parser.add_argument('--model_name')
-    model_name_args, _ = temp_parser.parse_known_args(model_args)
-    model_name = model_name_args.model_name
-    if not model_name:
-        raise ValueError("Error: --model_name argument is required. Eg: --model_name TimesNet")
-
-    print(f"\n--- Creating Model: {model_name} ---")
-    model = create_model(model_args)
-
-    # 4. Setup Logging and Checkpoints
-    run_output_dir = os.path.join(train_args.output_dir, model_name, f"run_{pd.Timestamp.now().strftime('%Y%m%d-%H%M%S')}")
+    # 3. Setup Logging and Checkpoints
+    run_output_dir = os.path.join(args.output_dir, args.model_name, f"run_{pd.Timestamp.now().strftime('%Y%m%d-%H%M%S')}")
     os.makedirs(run_output_dir, exist_ok=True)
 
-    logger = TensorBoardLogger(save_dir=train_args.output_dir, name=model_name)
-    checkpoints_dir = os.path.join(run_output_dir, "checkpoints")
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=checkpoints_dir,
-        filename="best-checkpoint",
-        save_top_k=1,
-        monitor="val_loss",
-        mode="min"
+    logger = TensorBoardLogger(save_dir=args.output_dir, name=args.model_name)
+    
+    callbacks = []
+    if not args.disable_checkpointing:
+        checkpoints_dir = os.path.join(run_output_dir, "checkpoints")
+        checkpoint_callback = ModelCheckpoint(
+            dirpath=checkpoints_dir,
+            filename="best-checkpoint",
+            save_top_k=1,
+            monitor="val_loss",
+            mode="min"
+        )
+        callbacks.append(checkpoint_callback)
+        print("Model checkpointing is ENABLED.")
+    else:
+        print("Model checkpointing is DISABLED.")
+
+    # 4. Create the Model using the unified arguments, passing logger and callbacks
+    print(f"\n--- Creating Model: {args.model_name} ---")
+    model = create_model_from_args(
+        args=args,
+        callbacks=callbacks,
+        logger=logger
     )
 
-    # Add callbacks and logger to the model instance
-    model.callbacks = [checkpoint_callback]
-    model.logger = logger
-
     # 5. Initialize and Train NeuralForecast
-    nf = NeuralForecast(models=[model], freq=train_args.freq)
+    nf = NeuralForecast(models=[model], freq=args.freq)
 
     print("\n--- Starting Training ---")
-    nf.fit(df=train_df, val_size=train_args.val_size)
+    nf.fit(df=train_df, val_size=args.val_size)
 
-    # 6. Make Predictions
-    print("\n--- Generating Forecasts ---")
+    # 6. Make Predictions on the test set
+    print("\n--- Generating Forecasts on Test Set ---")
     forecasts_df = nf.predict(futr_df=test_df)
     forecasts_df = forecasts_df.reset_index()
     results_df = pd.merge(test_df, forecasts_df, on=['unique_id', 'ds'], how='left')
@@ -102,40 +103,38 @@ def main():
     print(f"Forecasts saved to: {forecast_csv_path}")
 
     # 8. Evaluate forecasts
-    from utils import calculate_metrics, save_dict_to_json
-
-    evaluation = calculate_metrics(results_df, model_name)
+    evaluation = calculate_metrics(results_df, args.model_name)
     print("\n--- Evaluation Metrics ---")
     for metric, value in evaluation.items():
         print(f"{metric.upper()}: {value:.4f}")
 
     summary = {
-        'model_args': model_args,
+        'model_args': vars(args),
         'evaluation': evaluation
     }
     summary_path = os.path.join(run_output_dir, 'summary.json')
     save_dict_to_json(summary, summary_path)
     print(f"\nEvaluation summary saved to: {summary_path}")
 
-    # 8. Plot and Save Figure
+    # 9. Plot and Save Figure
     fig, ax = plt.subplots(figsize=(12, 8))
     plot_df = results_df.set_index('ds')
 
     plot_df['y'].plot(ax=ax, label='Actual')
-    plot_df[model_name].plot(ax=ax, label='Forecast')
+    plot_df[args.model_name].plot(ax=ax, label='Forecast')
 
     # If it's DistributionLoss, plot confidence intervals
-    if f'{model_name}-lo-90' in plot_df.columns:
+    if f'{args.model_name}-lo-90' in plot_df.columns:
         ax.fill_between(
             plot_df.index,
-            plot_df[f'{model_name}-lo-90'],
-            plot_df[f'{model_name}-hi-90'],
+            plot_df[f'{args.model_name}-lo-90'],
+            plot_df[f'{args.model_name}-hi-90'],
             alpha=0.3,
             color='orange',
             label='90% Confidence Interval'
         )
 
-    ax.set_title(f'{model_name} Forecast vs Actuals ({train_args.traffic_direction} traffic)')
+    ax.set_title(f'{args.model_name} Forecast vs Actuals ({args.traffic_direction} traffic)')
     ax.set_xlabel('Timestamp')
     ax.set_ylabel('Traffic (Mbps)')
     ax.legend()

@@ -52,7 +52,7 @@ def add_model_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     
     return parser
 
-def create_model_from_args(args: argparse.Namespace) -> object:
+def create_model_from_args(args: argparse.Namespace, callbacks: list = None, logger = None) -> object:
     """Creates a NeuralForecast model instance from parsed arguments."""
     LOSS_MAP = {
         'DistributionLoss': DistributionLoss(distribution='Normal', level=[80, 90]),
@@ -72,7 +72,10 @@ def create_model_from_args(args: argparse.Namespace) -> object:
         'loss': loss_function,
         'scaler_type': 'standard',
         'val_check_steps': 50,
-        'early_stop_patience_steps': 3
+        'early_stop_patience_steps': 0,
+        'callbacks': callbacks,
+        'logger': logger,
+        'enable_checkpointing': True
     }
 
     # Add model-specific parameters based on the chosen model
@@ -111,7 +114,7 @@ def main(args_list: list = None):
     )
     parser = add_model_args(parser)
     args = parser.parse_args(args_list)
-    model_instance = create_model_from_args(args)
+    model_instance = create_model_from_args(args=args)
 
     # Only print details when run as a standalone script
     if args_list is None:

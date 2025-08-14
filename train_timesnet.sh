@@ -31,7 +31,7 @@ python3 /Users/phamminhtuan/Desktop/TimesNetOptimize/training.py \
     --traffic_direction "${TRAFFIC_DIRECTION}" \
     --output_dir "${OUTPUT_DIR}" \
     --freq "5min" \
-    --val_size 12 \
+    --val_size 24 \
     --model_name TimesNet \
     --h ${HORIZON} \
     --input_size ${INPUT_SIZE} \
@@ -40,5 +40,6 @@ python3 /Users/phamminhtuan/Desktop/TimesNetOptimize/training.py \
     --max_steps ${MAX_STEPS} \
     --hidden_size ${HIDDEN_SIZE} \
     --conv_hidden_size ${CONV_HIDDEN_SIZE}
+   
 
 echo "✅ TimesNet training run finished successfully!"
