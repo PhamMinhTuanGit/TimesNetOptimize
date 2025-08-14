@@ -1,0 +1,6 @@
+torch==2.8.0
+pandas
+neuralforecast
+scikit-learn
+matplotlib
+openpyxl
