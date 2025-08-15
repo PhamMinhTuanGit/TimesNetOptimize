@@ -1,4 +1,5 @@
-torch==2.2.1
+torch
+torchvision
 pandas
 neuralforecast
 scikit-learn

@@ -98,7 +98,8 @@ def main():
     results_df = pd.merge(test_df, forecasts_df, on=['unique_id', 'ds'], how='left')
 
     # 7. Save Results
-    forecast_csv_path = os.path.join(run_output_dir, 'forecasts.csv')
+    params = sum(p.numel() for p in model.parameters())
+    forecast_csv_path = os.path.join(run_output_dir, f'forecasts_{args.model_name}_{params}_{args.traffic_direction}.csv')
     results_df.to_csv(forecast_csv_path, index=False)
     print(f"Forecasts saved to: {forecast_csv_path}")
 
@@ -140,7 +141,7 @@ def main():
     ax.legend()
     ax.grid(True)
 
-    plot_path = os.path.join(run_output_dir, 'forecast_plot.png')
+    plot_path = os.path.join(run_output_dir, f'forecast_plot_{args.model_name}_{params}_{args.traffic_direction}.png')
     fig.savefig(plot_path)
     print(f"Forecast plot saved to: {plot_path}")
     plt.close(fig)
