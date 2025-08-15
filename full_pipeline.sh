@@ -1,75 +1,55 @@
 #!/bin/bash
 
-# This script automates the process of training the TimesNet model
-# using the main training script (training.py).
-
-# Exit immediately if a command exits with a non-zero status.
+# Exit if any command fails
 set -e
 
-echo "Starting TimesNet training run..."
+echo "🚀 Starting TimesNet training run..."
 
 # --- Configuration ---
-# Define variables for paths and hyperparameters to make the script easy to modify.
 DATA_FILE="data/SLA0338SRT03_20250807114925121.xlsx"
 TRAFFIC_DIRECTION="out"
 OUTPUT_DIR="./output"
 
-# Model-specific hyperparameters for this run
+MODEL_NAME="TimesNet"
 HORIZON=24
 INPUT_SIZE=72
-LOSS_FUNCTION="MAE" # Using MAE for a simple, robust loss
+LOSS_FUNCTION="MAPE"
 LEARNING_RATE=1e-4
 MAX_STEPS=100
 HIDDEN_SIZE=144
 CONV_HIDDEN_SIZE=128
 
-# --- Execute Training Command ---
-# The backslashes (\) at the end of each line allow us to break the command
-# into multiple lines for better readability.
-python3 training.py \
+# --- Run Training ---
+CHECKPOINT_PATH=$(python3 training.py \
     --data_path "${DATA_FILE}" \
     --traffic_direction "${TRAFFIC_DIRECTION}" \
     --output_dir "${OUTPUT_DIR}" \
     --freq "5min" \
     --val_size 0 \
-    --model_name TimesNet \
+    --model_name "${MODEL_NAME}" \
     --h ${HORIZON} \
     --input_size ${INPUT_SIZE} \
     --loss ${LOSS_FUNCTION} \
     --learning_rate ${LEARNING_RATE} \
     --max_steps ${MAX_STEPS} \
     --hidden_size ${HIDDEN_SIZE} \
-    --conv_hidden_size ${CONV_HIDDEN_SIZE}
-   
+    --conv_hidden_size ${CONV_HIDDEN_SIZE} \
+    | tail -n 1| tr -d '\r')
 
-echo "TimesNet training run finished successfully!"
+echo "✅ Training finished!"
+echo "🔖 Saved checkpoint: $CHECKPOINT_PATH"
 
-set -e
+# --- Inference Configuration ---
+echo "🔍 Starting inference..."
+INFER_DATA_FILE="data/SLA0338SRT03_20250807114227010.xlsx"
+INFER_OUTPUT_DIR="./inference_output"
 
-echo "🚀 Starting rolling forecast inference..."
-
-# --- Configuration ---
-# IMPORTANT: You must update CHECKPOINT_PATH with the path to your trained model checkpoint.
-
-
-MODEL_NAME="TimesNet"
-CHECKPOINT_PATH=$1
-
-DATA_FILE="data/SLA0338SRT03_20250807114227010.xlsx"
-TRAFFIC_DIRECTION="out"
-OUTPUT_DIR="./inference_output"
-if [ $# -eq 0 ]; then
-    echo "usage: ./inference.sh <CHECKPOINT_PATH>"
-    exit 1
-fi
-
-# --- Execute Inference Command ---
 python3 inference.py \
     --checkpoint_path "${CHECKPOINT_PATH}" \
     --model_name "${MODEL_NAME}" \
-    --data_path "${DATA_FILE}" \
+    --data_path "${INFER_DATA_FILE}" \
     --traffic_direction "${TRAFFIC_DIRECTION}" \
-    --output_dir "${OUTPUT_DIR}"
+    --output_dir "${INFER_OUTPUT_DIR}"
 
 echo "✅ Inference run finished successfully!"
-echo "Find your results in the '${OUTPUT_DIR}' directory."
+echo "📁 Results saved to: '${INFER_OUTPUT_DIR}'"

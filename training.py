@@ -57,6 +57,7 @@ def main():
 
     ckpt_path = f'output/{args.model_name}/{args.model_name}_{params:.1f}m'
     nf.save(path = ckpt_path, overwrite=True)
+    print(ckpt_path)
 
     
 
