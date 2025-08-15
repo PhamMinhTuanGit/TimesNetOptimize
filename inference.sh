@@ -11,21 +11,20 @@ echo "🚀 Starting rolling forecast inference..."
 # --- Configuration ---
 # IMPORTANT: You must update CHECKPOINT_PATH with the path to your trained model checkpoint.
 
-if [ "$#" -ne 2 ]; then
-    echo "❌ Usage: $0 <MODEL_NAME> <PATH_TO_CHECKPOINT>"
-    echo "   Example: $0 TimesNet output/TimesNet/run_.../checkpoints/best-checkpoint.ckpt"
-    exit 1
-fi
 
-MODEL_NAME=$1
-CHECKPOINT_PATH=$2
+MODEL_NAME="TimesNet"
+CHECKPOINT_PATH=$1
 
 DATA_FILE="data/SLA0338SRT03_20250807114227010.xlsx"
 TRAFFIC_DIRECTION="in"
 OUTPUT_DIR="./inference_output"
+if [ $# -eq 0 ]; then
+    echo "usage: ./inference.sh <CHECKPOINT_PATH>"
+    exit 1
+fi
 
 # --- Execute Inference Command ---
-python /Users/phamminhtuan/Desktop/TimesNetOptimize/inference.py \
+python3 inference.py \
     --checkpoint_path "${CHECKPOINT_PATH}" \
     --model_name "${MODEL_NAME}" \
     --data_path "${DATA_FILE}" \

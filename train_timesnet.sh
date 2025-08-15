@@ -10,7 +10,7 @@ echo "🚀 Starting TimesNet training run..."
 
 # --- Configuration ---
 # Define variables for paths and hyperparameters to make the script easy to modify.
-DATA_FILE="data/SLA0338SRT03_20250807114227010.xlsx"
+DATA_FILE="data/SLA0338SRT03_20250807114925121.xlsx"
 TRAFFIC_DIRECTION="in"
 OUTPUT_DIR="./output"
 
@@ -19,8 +19,8 @@ HORIZON=24
 INPUT_SIZE=72
 LOSS_FUNCTION="MAE" # Using MAE for a simple, robust loss
 LEARNING_RATE=1e-4
-MAX_STEPS=500
-HIDDEN_SIZE=128
+MAX_STEPS=100
+HIDDEN_SIZE=144
 CONV_HIDDEN_SIZE=128
 
 # --- Execute Training Command ---
@@ -31,7 +31,7 @@ python3 training.py \
     --traffic_direction "${TRAFFIC_DIRECTION}" \
     --output_dir "${OUTPUT_DIR}" \
     --freq "5min" \
-    --val_size 24 \
+    --val_size 0 \
     --model_name TimesNet \
     --h ${HORIZON} \
     --input_size ${INPUT_SIZE} \

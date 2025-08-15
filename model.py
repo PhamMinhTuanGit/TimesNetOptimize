@@ -72,7 +72,7 @@ def create_model_from_args(args: argparse.Namespace, callbacks: list = None, log
         'loss': loss_function,
         'scaler_type': 'standard',
         'val_check_steps': 50,
-        'early_stop_patience_steps': 0,
+        'early_stop_patience_steps': -1,
         'callbacks': callbacks,
         'logger': logger,
         'enable_checkpointing': True
