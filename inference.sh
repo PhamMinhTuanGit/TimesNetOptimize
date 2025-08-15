@@ -16,7 +16,7 @@ MODEL_NAME="TimesNet"
 CHECKPOINT_PATH=$1
 
 DATA_FILE="data/SLA0338SRT03_20250807114227010.xlsx"
-TRAFFIC_DIRECTION="in"
+TRAFFIC_DIRECTION="out"
 OUTPUT_DIR="./inference_output"
 if [ $# -eq 0 ]; then
     echo "usage: ./inference.sh <CHECKPOINT_PATH>"

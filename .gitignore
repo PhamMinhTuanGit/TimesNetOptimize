@@ -5,3 +5,4 @@ __pycache__
 output
 lightning_logs
 inference_output
+__pycache__
