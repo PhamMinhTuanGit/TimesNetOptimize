@@ -1,10 +1,73 @@
 import pandas as pd
-import torch
 import matplotlib.pyplot as plt
+import argparse
+import os
 
-df = pd.read_csv('inference_output/TimesNet_20250815-095248/rolling_forecast.csv')
-plt.figure(figsize=[16,8])
-plt.plot(df['TimesNet'], color = 'r', label = 'prediction')
-plt.plot(df['y'], color = 'b', label = 'Truth')
-plt.legend()
-plt.savefig('test.png')
+def main():
+    """
+    Loads forecast data from a CSV and generates a plot comparing
+    actual values vs. predicted values over time.
+    """
+    parser = argparse.ArgumentParser(description="Visualize forecast results from a CSV file.")
+    parser.add_argument('--forecast_path', type=str, required=True,
+                        help='Path to the forecast CSV file. Must contain "ds", "y", and a prediction column.')
+    parser.add_argument('--model_name', type=str, required=True,
+                        help='Name of the model, used to identify the prediction column (e.g., "TimesNet").')
+    parser.add_argument('--output_dir', type=str, default='./visualizations',
+                        help='Directory to save the output plot.')
+    args = parser.parse_args()
+
+    # --- 1. Load Data ---
+    try:
+        df = pd.read_csv(args.forecast_path)
+        print(f"Successfully loaded forecast data from: {args.forecast_path}")
+    except FileNotFoundError:
+        print(f"[ERROR] File not found at: {args.forecast_path}")
+        return
+    except Exception as e:
+        print(f"[ERROR] Failed to read CSV file: {e}")
+        return
+
+    # --- 2. Prepare Data for Plotting ---
+    # Ensure 'ds' column is in datetime format
+    if 'ds' not in df.columns:
+        print("[ERROR] 'ds' column not found in the forecast file.")
+        return
+    df['ds'] = pd.to_datetime(df['ds'])
+
+    # Identify prediction column
+    # neuralforecast often names it {model_name} or {model_name}-median for point forecasts
+    pred_col = args.model_name
+    if pred_col not in df.columns:
+        pred_col = f'{args.model_name}-median'
+        if pred_col not in df.columns:
+            print(f"[ERROR] Could not find prediction column '{args.model_name}' or '{pred_col}' in the file.")
+            print(f"Available columns: {df.columns.tolist()}")
+            return
+
+    if 'y' not in df.columns:
+        print("[ERROR] 'y' column (actual values) not found in the forecast file.")
+        return
+
+    # --- 3. Create and Save Plot ---
+    plt.style.use('seaborn-v0_8-grid')
+    fig, ax = plt.subplots(figsize=(15, 7))
+
+    ax.plot(df['ds'], df['y'], label='Actual Values', color='blue', marker='.', linestyle='-')
+    ax.plot(df['ds'], df[pred_col], label=f'{args.model_name} Forecast', color='red', marker='.', linestyle='--')
+
+    ax.set_title(f'Forecast vs. Actuals for {args.model_name}', fontsize=16)
+    ax.set_xlabel('Date', fontsize=12)
+    ax.set_ylabel('Traffic (Mbps)', fontsize=12)
+    ax.legend()
+    ax.grid(True)
+    plt.xticks(rotation=45)
+    fig.tight_layout()
+
+    os.makedirs(args.output_dir, exist_ok=True)
+    output_path = os.path.join(args.output_dir, f"{args.model_name}_forecast_plot.png")
+    plt.savefig(output_path, dpi=300)
+    print(f"✅ Plot saved successfully to: {output_path}")
+
+if __name__ == '__main__':
+    main()

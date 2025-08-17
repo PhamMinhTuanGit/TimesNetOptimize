@@ -44,12 +44,31 @@ echo "🔍 Starting inference..."
 INFER_DATA_FILE="data/SLA0338SRT03_20250807114227010.xlsx"
 INFER_OUTPUT_DIR="./inference_output"
 
-python3 inference.py \
+FORECAST_PATH=$(python3 inference.py \
     --checkpoint_path "${CHECKPOINT_PATH}" \
     --model_name "${MODEL_NAME}" \
     --data_path "${INFER_DATA_FILE}" \
     --traffic_direction "${TRAFFIC_DIRECTION}" \
     --output_dir "${INFER_OUTPUT_DIR}"
+    | tail -n 1 | tr -d '\r')
 
 echo "✅ Inference run finished successfully!"
-echo "📁 Results saved to: '${INFER_OUTPUT_DIR}'"
+echo "📁 Forecasts saved to: '${FORECAST_PATH}'"
+
+# --- Run Evaluation ---
+echo "📊 Starting evaluation..."
+python3 evaluation.py \
+    --forecast_path "${FORECAST_PATH}" \
+    --training_path "${DATA_FILE}" \
+    --model_name "${MODEL_NAME}"
+
+echo "📊 Evaluation completed successfully!"
+
+# --- Run Visualization ---
+echo "🎨 Generating forecast plot..."
+python3 visualize.py \
+    --forecast_path "${FORECAST_PATH}" \
+    --model_name "${MODEL_NAME}" \
+    --output_dir "./visualizations"
+
+echo "🖼️  Visualization complete!"

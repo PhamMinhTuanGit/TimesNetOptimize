@@ -8,6 +8,7 @@ This project provides a flexible framework for training and evaluating state-of-
 - **Configurable Training:** Easily train different models with various hyperparameters using shell scripts or command-line arguments.
 - **Comprehensive Evaluation:** Automatically calculates and saves key performance metrics (MAE, MSE, RMSE, MAPE).
 - **Visualization:** Generates and saves plots of forecasts against actual values.
+- **End-to-End Pipeline:** A single script (`full_pipeline.sh`) to run training, inference, evaluation, and visualization in one go.
 - **Rolling Forecast Inference:** Includes a script to simulate real-world model performance using a rolling forecast methodology.
 
 ---

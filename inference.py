@@ -73,7 +73,8 @@ def main():
     # Save CSV
     forecast_csv_path = os.path.join(run_output_dir, 'rolling_forecast.csv')
     results_df.to_csv(forecast_csv_path, index=False)
-    print(f"Forecasts saved to: {forecast_csv_path}")
+    # The final print is the path to the forecast CSV, for scripting.
+    print(forecast_csv_path)
 
 
 if __name__ == '__main__':
