@@ -79,15 +79,15 @@ After training, you will find the results (logs, checkpoints, forecasts, and plo
 
 Once you have a trained model checkpoint, you can run inference.
 
-1.  **Find your checkpoint path:** Look in the `output` directory for a file named `best-checkpoint.ckpt`. Copy its path.
-2.  **Run the inference script:**
+1.  **Find your checkpoint directory:** After training, the path to the saved model directory will be printed (e.g., `output/TimesNet/TimesNet_2.1m`). Copy this path.
+2.  **Run the inference pipeline script:**
 
 ```bash
 # Make the script executable
 !chmod +x ./inference.sh
 
-# Run inference by providing the model name and the path to the checkpoint
-!./inference.sh TimesNet "output/TimesNet/run_.../checkpoints/best-checkpoint.ckpt"
+# Run the full pipeline by providing the model name and the path to the checkpoint directory
+!./inference.sh TimesNet "output/TimesNet/TimesNet_2.1m"
 ```
 
 ---
