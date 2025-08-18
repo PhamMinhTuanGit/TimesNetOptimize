@@ -1,20 +1,10 @@
-import pandas as pd
-import torch
-import os
 import argparse
-import matplotlib.pyplot as plt
-import time
-
 from neuralforecast import NeuralForecast
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger
-from pytorch_lightning import Trainer
 from utils import load_and_process_data
 
 # Import from your local modules
 
 from model import add_model_args, create_model_from_args, count_parameters
-from utils import save_dict_to_json
 
 def main():
     # 1. Setup Argument Parser
@@ -35,11 +25,9 @@ def main():
     args = parser.parse_args()
 
     # 2. Load and Prepare Data
-    train_df, test_df = load_and_process_data(args.data_path, args.traffic_direction, train_scale=1)
+    train_df, _ = load_and_process_data(args.data_path, args.traffic_direction, train_scale=1)
 
     # 3. Setup Logging and Checkpoints
-    run_output_dir = os.path.join(args.output_dir, args.model_name, f"run_{pd.Timestamp.now().strftime('%Y%m%d-%H%M%S')}")
-    os.makedirs(run_output_dir, exist_ok=True)
 
   
 
