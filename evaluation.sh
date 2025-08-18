@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-
+echo ""
 MODEL_NAME = $1
 FORECAST_PATH = $2
 DATA_FILE = $3
