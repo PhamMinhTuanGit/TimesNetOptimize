@@ -3,11 +3,17 @@ import os
 import pandas as pd
 from tqdm import tqdm
 import logging
-
+import warnings
+import lightning_utilities.core.rank_zero as rank_zero
+def silent(*args, **kwargs): pass
+rank_zero.rank_zero_info = silent
+rank_zero.rank_zero_warn = silent
 from neuralforecast import NeuralForecast
 # We need to import the model classes to be able to load from a checkpoint
 from utils import load_and_process_data
-
+os.environ["PL_DISABLE_PROGRESS_BAR"] = "1"
+os.environ["PL_DISABLE_LOGGING"] = "1"
+os.environ["PYTHONWARNINGS"] = "ignore"
 
 def setup_arg_parser() -> argparse.ArgumentParser:
     """Sets up and returns the argument parser."""
@@ -18,6 +24,7 @@ def setup_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument('--traffic_direction', type=str, default='in', choices=['in', 'out'], help='Traffic direction to model.')
     parser.add_argument('--output_dir', type=str, default='./inference_output', help='Directory to save forecasts and plots.')
     parser.add_argument('--silent', action='store_true', help='If set, disables all logging and progress bars.')
+    parser.add_argument('--training_path', required=True, help = 'History dataFrame to fit the model')
     return parser
 
 
@@ -51,7 +58,7 @@ def perform_rolling_forecast(nf: NeuralForecast, history_df: pd.DataFrame, futur
         if actuals_for_step.empty:
             break
         history_df = pd.concat([history_df, actuals_for_step])
-
+        print(f'Progress: {i}/{len(future_df)}')
     return pd.concat(all_forecasts).reset_index()
 
 
@@ -68,13 +75,14 @@ def save_results(forecasts_df: pd.DataFrame, future_df: pd.DataFrame, output_dir
 
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
-    run_output_dir = os.path.join(output_dir, f"{model_name}_{pd.Timestamp.now().strftime('%Y%m%d-%H%M%S')}")
-    os.makedirs(run_output_dir, exist_ok=True)
+    
 
     # Save CSV
-    forecast_csv_path = os.path.join(run_output_dir, 'rolling_forecast.csv')
+    forecast_csv_path = os.path.join(output_dir, f'rolling_forecast_{model_name}.csv')
     results_df.to_csv(forecast_csv_path, index=False)
     return forecast_csv_path
+
+
 
 
 def main():
@@ -82,15 +90,25 @@ def main():
     parser = setup_arg_parser()
     args = parser.parse_args()
 
-    if args.silent:
-        logging.getLogger("neuralforecast").setLevel(logging.ERROR)
-        logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
+    # Suppress warnings
+    warnings.filterwarnings("ignore")
+
+    # Suppress logging from libraries
+    logging.getLogger("neuralforecast").setLevel(logging.CRITICAL)
+    logging.getLogger("pytorch_lightning").setLevel(logging.CRITICAL)
+    logging.getLogger("lightning").setLevel(logging.CRITICAL)
+
+    # Environment variables to silence PyTorch Lightning CLI and other outputs
+    os.environ["PYTHONWARNINGS"] = "ignore"
+    os.environ["PL_DISABLE_PROGRESS_BAR"] = "1"
+    os.environ["PL_DISABLE_LOGGING"] = "1"
 
     if not args.silent:
         print(f"Loading model '{args.model_name}' from: {args.checkpoint_path}")
     nf = NeuralForecast.load(path=args.checkpoint_path)
 
-    history_df, future_df = load_and_process_data(args.data_path, args.traffic_direction, train_scale=0.1)
+    future_df, _ = load_and_process_data(args.data_path, args.traffic_direction, train_scale=1)
+    history_df, _ = load_and_process_data(args.training_path, args.traffic_direction, train_scale=1)
     if not args.silent:
         print(f"Initial history size: {len(history_df)}, Future data to predict: {len(future_df)}")
 
@@ -98,9 +116,8 @@ def main():
 
     forecast_csv_path = save_results(forecasts_df, future_df, args.output_dir, args.model_name, args.silent)
 
-    # The final print is the path to the forecast CSV, for scripting.
+    # Final output: path to forecast CSV
     print(forecast_csv_path)
-
 
 if __name__ == '__main__':
     main()

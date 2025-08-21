@@ -10,18 +10,18 @@ echo "Starting TimesNet training run..."
 
 # --- Configuration ---
 # Define variables for paths and hyperparameters to make the script easy to modify.
-DATA_FILE=$1
+DATA_FILE="data/T56.xlsx"
 TRAFFIC_DIRECTION="out"
 OUTPUT_DIR="./output"
 
 # Model-specific hyperparameters for this run
 HORIZON=24
 INPUT_SIZE=72
-LOSS_FUNCTION="MAPE" # Using MAE for a simple, robust loss
-LEARNING_RATE=$2
-MAX_STEPS=$3
-HIDDEN_SIZE=$4
-CONV_HIDDEN_SIZE=$5
+LOSS_FUNCTION="DistributionLoss" # Using MAE for a simple, robust loss
+LEARNING_RATE=1e-4
+MAX_STEPS=200
+HIDDEN_SIZE=128
+CONV_HIDDEN_SIZE=144
 
 # --- Execute Training Command ---
 # The backslashes (\) at the end of each line allow us to break the command

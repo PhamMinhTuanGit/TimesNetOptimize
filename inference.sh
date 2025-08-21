@@ -25,11 +25,11 @@ echo "🚀 Starting inference pipeline for model: ${MODEL_NAME}"
 
 # --- 2. Configuration ---
 # These can be customized if needed
-DATA_FILE="data/SLA0338SRT03_20250807114227010.xlsx"
+DATA_FILE="data/T67.xlsx"
 TRAFFIC_DIRECTION="out"
 INFER_OUTPUT_DIR="./inference_output"
 VIS_OUTPUT_DIR="./visualizations"
-
+TRAINING_PATH="data/T56.xlsx"
 # --- 3. Run Inference ---
 echo "🔍 Step 1/3: Running rolling forecast inference..."
 # The inference script is run in silent mode to only output the final CSV path.
@@ -39,6 +39,7 @@ FORECAST_PATH=$(python3 inference.py \
     --data_path "${DATA_FILE}" \
     --traffic_direction "${TRAFFIC_DIRECTION}" \
     --output_dir "${INFER_OUTPUT_DIR}" \
+    --training_path "${TRAINING_PATH}"\
     --silent \
     | tail -n 1 | tr -d '\r')
 

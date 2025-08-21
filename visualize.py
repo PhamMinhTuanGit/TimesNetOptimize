@@ -50,19 +50,30 @@ def main():
         return
 
     # --- 3. Create and Save Plot ---
-    plt.style.use('seaborn-v0_8-grid')
+   
     fig, ax = plt.subplots(figsize=(15, 7))
-
-    ax.plot(df['ds'], df['y'], label='Actual Values', color='blue', marker='.', linestyle='-')
-    ax.plot(df['ds'], df[pred_col], label=f'{args.model_name} Forecast', color='red', marker='.', linestyle='--')
-
-    ax.set_title(f'Forecast vs. Actuals for {args.model_name}', fontsize=16)
-    ax.set_xlabel('Date', fontsize=12)
-    ax.set_ylabel('Traffic (Mbps)', fontsize=12)
-    ax.legend()
-    ax.grid(True)
-    plt.xticks(rotation=45)
-    fig.tight_layout()
+    if pred_col == f'{args.model_name}-median':
+        ax.plot(df['ds'], df['y'], label='Actual Values', color='blue', linestyle='-')
+        ax.plot(df['ds'], df[pred_col], label=f'{args.model_name} Forecast', color='red', linestyle='--')
+        ax.fill_between(df['ds'], df[f'{args.model_name}-hi-90'], df[f'{args.model_name}-lo-90'])
+        ax.set_title(f'Forecast vs. Actuals for {args.model_name}', fontsize=16)
+        ax.set_xlabel('Date', fontsize=12)
+        ax.set_ylabel('Traffic (Mbps)', fontsize=12)
+        ax.legend()
+        ax.grid(True)
+        plt.xticks(rotation=45)
+        fig.tight_layout()
+    else:
+        pred_col == f'{args.model_name}'
+        ax.plot(df['ds'], df['y'], label='Actual Values', color='blue', linestyle='-')
+        ax.plot(df['ds'], df[pred_col], label=f'{args.model_name} Forecast', color='red', linestyle='--')
+        ax.set_title(f'Forecast vs. Actuals for {args.model_name}', fontsize=16)
+        ax.set_xlabel('Date', fontsize=12)
+        ax.set_ylabel('Traffic (Mbps)', fontsize=12)
+        ax.legend()
+        ax.grid(True)
+        plt.xticks(rotation=45)
+        fig.tight_layout()
 
     os.makedirs(args.output_dir, exist_ok=True)
     output_path = os.path.join(args.output_dir, f"{args.model_name}_forecast_plot.png")

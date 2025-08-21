@@ -31,7 +31,7 @@ def main():
 
   
 
-    # 4. Create the Model using the unified arguments, passing logger and callbacks
+ # 4. Create the Model using the unified arguments, passing logger and callbacks
     print(f"\n--- Creating Model: {args.model_name} ---")
     model = create_model_from_args(
         args=args,
@@ -43,7 +43,7 @@ def main():
     params = count_parameters(model)/1e6
     nf.fit(df=train_df, val_size=args.val_size)
 
-    ckpt_path = f'output/{args.model_name}/{args.model_name}_{params:.1f}m'
+    ckpt_path = f'output/{args.model_name}/{args.model_name}_{params:.1f}m_{args.loss}'
     nf.save(path = ckpt_path, overwrite=True)
     print(ckpt_path)
 
